@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, MessageCircle, Plus, Calendar as CalendarIcon, Clock, User, Scissors, Trash2, XCircle, Ban, AlertCircle } from 'lucide-react';
 import { Button, Modal, Input, Select, Avatar, Tabs } from '../components/ui';
 import { useApp } from '../context/AppContext';
@@ -8,6 +8,7 @@ import { AppointmentStatus, Appointment } from '../types';
 const Schedule: React.FC = () => {
   const { appointments, services, clients, addAppointment, updateAppointmentStatus, deleteAppointment, userConfig } = useApp();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const datePickerRef = useRef<HTMLInputElement>(null);
   
   // New Appointment Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,6 +35,21 @@ const Schedule: React.FC = () => {
     return d1.getDate() === d2.getDate() && 
            d1.getMonth() === d2.getMonth() && 
            d1.getFullYear() === d2.getFullYear();
+  };
+
+  // Helper to format date for input type="date"
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleDateSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.value) return;
+    const [year, month, day] = e.target.value.split('-').map(Number);
+    // Create date at midnight to avoid timezone issues with standard ISO parsing
+    setSelectedDate(new Date(year, month - 1, day));
   };
 
   // --- Data Preparation ---
@@ -171,20 +187,43 @@ const Schedule: React.FC = () => {
           <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())}>Hoje</Button>
         </div>
         
-        <div className="flex items-center justify-between bg-stone-50 p-2 rounded-xl">
-          <button onClick={() => changeDate(-1)} className="p-2 text-stone-500 hover:bg-white rounded-lg transition-colors">
-            <ChevronLeft size={20} />
-          </button>
-          <div className="text-center animate-in fade-in zoom-in duration-200" key={selectedDate.toISOString()}>
-            <span className="block text-xs font-semibold text-stone-400 uppercase">
-              {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
-            </span>
-            <span className="block text-lg font-bold text-stone-800">
-              {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
-            </span>
+        <div className="flex gap-2">
+          <div className="flex-1 flex items-center justify-between bg-stone-50 p-2 rounded-xl">
+            <button onClick={() => changeDate(-1)} className="p-2 text-stone-500 hover:bg-white rounded-lg transition-colors">
+              <ChevronLeft size={20} />
+            </button>
+            <div className="text-center animate-in fade-in zoom-in duration-200" key={selectedDate.toISOString()}>
+              <span className="block text-xs font-semibold text-stone-400 uppercase">
+                {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
+              </span>
+              <span className="block text-lg font-bold text-stone-800">
+                {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+              </span>
+            </div>
+            <button onClick={() => changeDate(1)} className="p-2 text-stone-500 hover:bg-white rounded-lg transition-colors">
+              <ChevronRight size={20} />
+            </button>
           </div>
-          <button onClick={() => changeDate(1)} className="p-2 text-stone-500 hover:bg-white rounded-lg transition-colors">
-            <ChevronRight size={20} />
+
+          <button 
+            onClick={() => {
+              try {
+                datePickerRef.current?.showPicker();
+              } catch(e) {
+                // Fallback or ignore
+              }
+            }}
+            className="bg-stone-50 rounded-xl flex items-center justify-center w-14 relative hover:bg-stone-100 transition-colors cursor-pointer"
+          >
+            <CalendarIcon size={20} className="text-stone-500" />
+            <input 
+              ref={datePickerRef}
+              type="date"
+              className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+              value={formatDateForInput(selectedDate)}
+              onChange={handleDateSelect}
+              tabIndex={-1}
+            />
           </button>
         </div>
       </div>
